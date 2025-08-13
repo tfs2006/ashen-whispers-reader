@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ashen Whispers - An Interactive Reading Experience</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,500;0,700;1,400&family=Cinzel+Decorative:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Lora', serif;
+            background-color: #1a1a1d;
+            color: #c5c6c7;
+            background-image: url('https://www.transparenttextures.com/patterns/cracks.png');
+        }
+        .font-cinzel {
+            font-family: 'Cinzel Decorative', cursive;
+        }
+        .book-title {
+            text-shadow: 0 0 10px #c5c6c7, 0 0 20px #c5c6c7, 0 0 30px #892cdc, 0 0 40px #892cdc;
+        }
+        .chapter-content {
+            background: rgba(26, 26, 29, 0.8);
+            backdrop-filter: blur(5px);
+            border: 1px solid #464646;
+            line-height: 1.8;
+            column-gap: 4rem;
+            transition: opacity 0.5s ease-in-out;
+        }
+        .chapter-content::first-letter {
+            font-size: 4em;
+            font-family: 'Cinzel Decorative', cursive;
+            float: left;
+            line-height: 1;
+            margin-right: 0.15em;
+            margin-top: 0.1em;
+            color: #a267e8;
+            text-shadow: 0 0 5px #a267e8;
+        }
+        .interactive-symbol {
+            font-family: 'Cinzel Decorative', cursive;
+            color: #a267e8;
+            cursor: pointer;
+            text-shadow: 0 0 5px #a267e8;
+            transition: all 0.3s ease;
+        }
+        .interactive-symbol:hover {
+            color: #c5c6c7;
+            text-shadow: 0 0 10px #c5c6c7;
+        }
+        .nav-button {
+            background-color: rgba(40, 40, 43, 0.7);
+            border: 1px solid #464646;
+            transition: all 0.3s ease;
+        }
+        .nav-button:hover:not(:disabled) {
+            background-color: #a267e8;
+            color: #1a1a1d;
+            border-color: #a267e8;
+            box-shadow: 0 0 15px #a267e8;
+        }
+        .nav-button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        #toc {
+            transition: transform 0.3s ease-in-out;
+        }
+        .toc-hidden {
+            transform: translateX(-100%);
+        }
+        .modal-backdrop {
+            background-color: rgba(0,0,0,0.7);
+            backdrop-filter: blur(5px);
+        }
+        .modal-content {
+            background-color: #1a1a1d;
+            border: 1px solid #a267e8;
+            box-shadow: 0 0 20px #a267e8;
+        }
+        .toc-link.active {
+            color: #a267e8;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body class="min-h-screen">
+
+    <!-- Background Image -->
+    <div class="fixed inset-0 z-[-1] bg-cover bg-center" style="background-image: url('https://images.unsplash.com/photo-1549488344-cbb6c34cf08b?q=80&w=2070&auto=format&fit=crop'); opacity: 0.1;"></div>
+
+    <!-- Header -->
+    <header class="p-4 md:p-6 text-center sticky top-0 z-20 bg-gradient-to-b from-[#1a1a1d] to-transparent">
+        <h1 class="text-4xl md:text-6xl font-cinzel book-title">Ashen Whispers</h1>
+    </header>
+
+    <!-- Main Content -->
+    <main class="container mx-auto p-4 md:p-8">
+        <div id="reader" class="chapter-content rounded-lg shadow-2xl p-6 md:p-12 text-lg md:text-xl">
+            <h2 id="chapter-title" class="text-3xl md:text-4xl font-cinzel text-center mb-8 text-[#a267e8]"></h2>
+            <div id="chapter-text" class="md:columns-2">
+                <!-- Chapter content will be loaded here by JavaScript -->
+            </div>
+        </div>
+    </main>
+
+    <!-- Navigation -->
+    <nav class="sticky bottom-0 z-20 p-4 flex justify-center items-center space-x-4 bg-gradient-to-t from-[#1a1a1d] to-transparent">
+        <button id="prev-btn" class="nav-button font-cinzel py-2 px-4 rounded-lg">Previous Chapter</button>
+        <button class="nav-button font-cinzel py-2 px-4 rounded-lg" onclick="toggleToc()">Table of Contents</button>
+        <button id="next-btn" class="nav-button font-cinzel py-2 px-4 rounded-lg">Next Chapter</button>
+    </nav>
+
+    <!-- Table of Contents (Hidden by default) -->
+    <div id="toc" class="fixed inset-y-0 left-0 w-80 bg-[#1a1a1d] border-r border-[#464646] p-8 z-30 toc-hidden shadow-2xl overflow-y-auto">
+        <h3 class="text-3xl font-cinzel text-[#a267e8] mb-8">Contents</h3>
+        <ul id="toc-list" class="space-y-4 text-lg">
+            <!-- ToC links will be loaded here by JavaScript -->
+        </ul>
+        <button class="absolute top-4 right-4 text-2xl" onclick="toggleToc()">&times;</button>
+    </div>
+
+    <!-- Modal for Interactive Elements -->
+    <div id="modal" class="fixed inset-0 z-40 items-center justify-center hidden modal-backdrop">
+        <div class="modal-content rounded-lg shadow-2xl p-8 max-w-lg w-full m-4 relative">
+            <h4 id="modal-title" class="text-2xl font-cinzel text-[#a267e8] mb-4"></h4>
+            <p id="modal-text" class="text-lg"></p>
+            <button class="absolute top-4 right-4 text-2xl" onclick="closeModal()">&times;</button>
+        </div>
+    </div>
+
+    <script>
+        // --- DATA ---
+        // The entire book's content is stored here.
+        const chapters = [
+            {
+                title: "Chapter 1: Arrival in the Wastes",
+                content: `<p>The barren horizon stretched out before Elias Blackthorne as he ventured deeper into the forsaken lands. The relentless sun, a low, bleached ember sinking toward dusk, cast long, wavering shadows over the cracked, parched earth. With each measured step, Elias left behind the trappings of civilization and entered a realm where every stone and gust of wind seemed to murmur secrets from a time long past.</p><p class="mt-4">Elias's heavy boots pounded the dry ground, the crunch of gravel beneath them punctuating the solemn silence of the wastes. In his worn leather satchel, he carried a collection of cryptic maps <span class="interactive-symbol" onclick="showModal('Map Fragment', 'A faded piece of parchment shows winding paths through an unnamed desert. Strange, runic symbols mark a location simply labeled &quot;The Temple.&quot;')">[⨁]</span> and yellowed journals—artifacts he had gathered over years of restless exploration and the pursuit of mysteries that defied explanation. Each carefully drawn line and handwritten note had, piece by piece, led him to this desolate expanse—a place spoken of in hushed tones by those who still dared to recall its cursed name.</p><p class="mt-4">He paused at the crest of a low, windswept ridge, allowing himself a moment to survey the endless wasteland below. The landscape was as forbidding as it was mesmerizing: twisted, gnarled trees reached toward the heavens like desperate hands grasping for salvation, while ancient rock formations, scarred by centuries of erosion, rose from the earth as silent sentinels to forgotten epochs. Overhead, the sky was a bruised tapestry of deep purples and burnt oranges—a vivid promise that night was imminent, when the unseen and the unspoken might finally stir.</p><p class="mt-4">In the distance, a faint outline of a modest settlement emerged—a scattering of crumbling stone buildings clinging precariously to the edge of oblivion. Elias's pulse quickened. He recalled the half-whispered legends told around flickering fires, the dire warnings of cursed lands and temples that guarded secrets too terrible to be unearthed. The villagers' apprehensive glances and furtive whispers had painted a picture of despair and resignation. And yet, the lure of discovery was irresistible to him.</p><p class="mt-4">Descending toward the settlement, a chill wind swept across the barren ground, raising clouds of dust and carrying with it the faint strains of old lore. Elias's mind drifted back to the stories his mentor had once shared—tales of ancient gods, cursed relics <span class="interactive-symbol" onclick="showModal('Cursed Relic', 'Legend speaks of the &quot;Eye of the Nameless God,&quot; a stone that shows glimpses of the future, but at the cost of one\\'s memories. It is said to be hidden within the temple.')">[⨁]</span>, and the terrible price exacted by those who dared disturb powers older than time. With each step, he felt both the burden and the promise of destiny pressing upon him.</p><p class="mt-4">As he neared the settlement's ramshackle edge, villagers began to emerge from shuttered doorways and narrow, winding alleys. Their faces were etched with hardship, deep lines and weary eyes bearing witness to lives spent in the constant shadow of dread. They regarded him with a mixture of suspicion and pity, their silent glances urging him to turn back. Yet the call of fate was too compelling to resist.</p><p class="mt-4">At the threshold of a creaking inn built of sun-bleached stone and timeworn wood, Elias encountered an elderly woman. Her skin was weathered like the bark of an ancient oak, and her eyes—sharp and penetrating despite the years—carried the weight of sorrow and caution. With a voice as rough and relentless as the desert wind, she broke the silence.</p><p class="mt-4">"Yer not from these parts, are ya?" she asked, her tone soft yet unyielding, as though each word were measured against an age-old reckoning. "No soul ought to wander these cursed lands. That temple... it holds a darkness that should never be disturbed."</p><p class="mt-4">Elias studied her, noting the slight tremor in her calloused hand as it clutched a faded shawl close to her chest. There was no malice in her tone—only a deep-seated fear born of a lifetime spent witnessing inexplicable misfortune. Rather than dissuade him, her words kindled the embers of his determination.</p><p class="mt-4">"Thank you for your concern," Elias replied, his voice steady and calm, betraying none of the inner tumult that her warning had stirred. "But the maps call me onward. There is truth hidden here, and I must see it for myself."</p>`
+            },
+            {
+                title: "Chapter 2: The Temple of Lost Names",
+                content: `<p>Elias emerged from the dark corridor with a slow, measured exhale, his heart still pounding from the intensity of the unknown. Before him, the ancient temple sprawled in all its forsaken grandeur—a vast, crumbling edifice that stood as a silent testament to a forgotten age. The structure's immense silhouette, half-swallowed by time and the encroaching wilderness, was a study in both awe and melancholy. Even from afar, one could see that the temple was not merely a ruin but a repository of legends—a place where the names of gods and heroes had been etched into stone, only to be eroded by the relentless march of centuries.</p><p class="mt-4">Elias paused at the threshold of the temple's inner courtyard. The space was dominated by a broad, open area paved with worn flagstones, their surfaces marred by cracks that had filled with moss and lichen. In the center of the courtyard, a towering basalt column <span class="interactive-symbol" onclick="showModal('The Basalt Column', 'An ancient pillar believed to be a conduit between the mortal world and the realm of the gods. Its surface is covered in names, each one a soul bound to the temple\\'s fate.')">[⨁]</span> rose upward, its surface covered in intricate carvings that seemed to shimmer with an ethereal light in the dim glow of his torch. It was as if the column itself served as a record of lives long past—a silent chronicle of triumphs, tragedies, and sacred rites.</p><p class="mt-4">Stepping slowly forward, Elias felt the pull of the ancient carvings. His eyes traveled over the bas-reliefs that depicted mythic scenes: winged figures engaged in celestial battles, solemn deities presiding over ceremonies of sacrifice, and mysterious symbols interwoven with depictions of natural phenomena. Each image, though faded by time, exuded a sense of deep purpose and timelessness. He reached out to touch one of the carvings—a delicate, almost imperceptible spiral that wound its way upward—and for a moment, he sensed that the stone was alive with memory.</p><p class="mt-4">The whispers that had first greeted him in the wastes now took on a richer, more layered quality here in the heart of the temple. They seemed to echo from every corner of the courtyard, their soft cadence rising and falling like a distant chant. Elias could not help but listen, straining to decipher their murmured language. There was a rhythm to the sounds—a cadence that suggested an ancient liturgy, a recitation of names and deeds that had long been obscured by the passage of time.</p>`
+            },
+            {
+                title: "Chapter 3: The Doors That Should Not Open",
+                content: `<p>The first rays of dawn had barely begun to chase away the lingering twilight when Elias Blackthorne found himself drawn once more toward the deeper mysteries of the temple. The cool pre-dawn air carried with it a promise of revelation, and the gentle murmur of ancient voices still echoed in his mind. With the memory of the courtyard of lost names fresh in his thoughts, he retraced his steps along a narrow passageway that led him away from the open courtyard and toward a darker, more secluded wing of the edifice.</p><p class="mt-4">This corridor, in stark contrast to the sunlit expanse he had just left, was cloaked in near-total shadow. The walls were dense with inscriptions and faded murals that depicted enigmatic scenes—figures bent in prayer, celestial beings locked in eternal conflict, and abstract symbols that seemed to pulse with a hidden energy. Elias's torch, its flame steady and unwavering, cast dancing shadows on the stone as he moved deliberately forward. Every step echoed softly, accompanied by the rhythmic beating of his heart and the ever-present whisper of secrets that the temple seemed to exhale.</p><p class="mt-4">After what felt like hours of wandering through these narrow passages, Elias came upon a peculiar door set into the wall at the end of a short hall. Unlike the other entrances he had encountered, this door was different—its surface was smooth, almost unnaturally so, and it bore no visible handle or keyhole. Instead, intricate carvings and etchings were embossed across its surface in the same mysterious script that had appeared throughout the temple. A sense of both foreboding and magnetic attraction seized him as he carefully approached the imposing barrier.</p><p class="mt-4">He knelt before the door and examined the delicate carvings under the flickering light of his torch. The script was foreign—letters and symbols arranged in a manner that defied any language he had studied. And yet, as he ran his fingers lightly over the carved lines, an unexpected understanding seemed to stir within him. The symbols, though unknown to mortal tongues, resonated with a meaning that was as clear as if they were written in his own language. It was as if the ancient wisdom of the temple were speaking directly to him through the medium of these forbidden signs. <span class="interactive-symbol" onclick="showModal('The Forbidden Script', 'A language not of words, but of concepts. It cannot be read, only understood by those who are attuned to the temple\\'s energy. It is said the script itself is a form of magic.')">[⨁]</span></p>`
+            },
+            {
+                title: "Chapter 4: The First Omen",
+                content: `<p>A heavy hush had descended over the temple as Elias emerged from the hidden chamber behind the door he had unlocked. The corridors, though familiar by now, took on a new air of portent as if the very walls were conspiring to forewarn him of what was to come. With each measured step through the labyrinthine passageways, an unsettling tension grew—a palpable sense that the temple was stirring in anticipation of events that defied mortal reason.</p><p class="mt-4">It began subtly. In a narrow hallway where the flickering light of his torch barely penetrated the gloom, Elias noticed a shadow that did not belong. It slithered along the far wall—a dark, amorphous shape that moved with a purpose all its own. He halted, his breath catching as he peered into the darkness. The shape seemed to dissolve into the shadows whenever he tried to focus on it, leaving him with the lingering feeling that he had witnessed something that defied the laws of nature.</p><p class="mt-4">For a long moment, silence reigned. Then, as if in answer to his unspoken questions, the corridor's ancient inscriptions began to shift before his eyes. The carved symbols, which had hitherto remained static and solemn, started to writhe and change. At first, it was only a subtle quiver—a tremor of light dancing across the etched lines. But soon, the changes grew more pronounced, as if the very language of the temple was trying to communicate something urgent. Elias's eyes widened in disbelief. The symbols he had studied so carefully in previous days were now in flux, their forms twisting into new patterns that he could not immediately decipher.</p>`
+            },
+            {
+                title: "Chapter 5: A Warning From the Dead",
+                content: `<p>The night after the ominous events in the temple, a strange stillness blanketed the ancient ruins. The interplay of moonlight and shadow rendered the crumbling stone in ghostly relief, and the wind's soft sigh seemed to echo with memories of long-forgotten voices. In his modest chamber above the inn, Elias Blackthorne lay awake, his mind swirling with the images of shifting symbols, spectral figures, and that overwhelming omen of his own name inscribed in the vaulted hall. Sleep eluded him; instead, the dark hours offered him unsettling visions and a persistent whisper—an urging, almost imperceptible, that something vital was on the brink of revelation.</p><p class="mt-4">At some indeterminate point during the night, Elias became aware of an odd sensation on his skin—a tingling warmth that seemed to seep beneath his flesh. He turned his hand slowly, and to his astonishment, discovered a strange marking that had appeared on his forearm. It was a delicate sigil, etched in a sinuous line of silver that glowed faintly in the half-light of the early hours. The mark was unlike any he had seen before; it pulsed gently as if alive, and it stirred in him a mixture of dread and fascination. There was no denying that it was connected to the temple, and perhaps to the mysterious forces that had spoken to him in the corridors of that ancient place.</p><p class="mt-4">Later that morning, with the memory of the glowing mark fresh in his mind, Elias made his way back to the heart of the settlement. The villagers, still wary of his continued forays into forbidden ground, regarded him with a blend of apprehension and resigned acceptance. Among them, one figure seemed to observe him more intently than the rest—a gaunt man with eyes that had seen too much, his lined face etched with sorrow. This man, known in hushed circles as Old Bram, was said to have once been an explorer of the wastelands before a terrible fate reduced his vibrant past to fragments of a whispered legend.</p><p class="mt-4">Elias approached Old Bram as the latter sat outside a modest dwelling, mending a broken trinket by the side of a flickering oil lamp. "Good morning, Bram," Elias greeted, his tone respectful but laced with urgency. "I was told that you might have something of interest-something from the days when the temple was not yet a memory." Bram's gnarled hand produced a small, battered leather-bound journal. <span class="interactive-symbol" onclick="showModal('Mordecai Reed\\'s Journal', 'A journal filled with frantic scrawlings and disturbing sketches. Reed was the last explorer to enter the temple and was driven mad by the voices within. His final entry reads: &quot;They are not memories. They are watching.&quot;')">[⨁]</span></p>`
+            },
+            {
+                title: "Chapter 6: The Guardian's Mark",
+                content: `<p>Elias emerged into the early light with a lingering heaviness in his chest, the echoes of Reed's dire warnings and the spectral voices still whispering in his mind. Yet, even as he retraced his steps away from the temple's depths, a subtle but insistent warmth pulsed beneath his skin—a reminder of the mysterious mark that had first appeared on his arm. For days now, that mark had been a silent companion on his journey, a symbol of an unknown legacy. But as dawn broke over the desolate wastes, Elias sensed that something was shifting.</p><p class="mt-4">He stopped in the solitude of a narrow, abandoned corridor near the outer edge of the temple. The silence here was nearly absolute—no distant murmur of spectral voices, no whisper of shifting stone—but the mark on his forearm began to glow with an inner fire. At first, it was a mere flicker of light, barely perceptible beneath his skin, but soon it intensified into a steady, burning heat. The sensation was not painful, yet it was as if the mark was demanding his attention, urging him to listen to the secrets hidden within his own flesh.</p><p class="mt-4">A sudden creak echoed through the corridor as a portion of the wall slowly swung inward, revealing a narrow passage that had been concealed for centuries. Dust motes danced in the sliver of pale light that poured into the secret chamber, and Elias felt a chill run down his spine. The mechanism, awakened by the burning mark, was not an accident—it was a deliberate, ancient design, activated by forces beyond mortal understanding. It was as if the temple itself recognized the mark as a sign that its guardian had arrived. <span class="interactive-symbol" onclick="showModal('The Guardian\\'s Mark', 'A sigil that appears on the chosen one destined to protect the temple. It acts as a key, unlocking hidden passages and revealing ancient secrets. It glows with an inner fire when near a source of power.')">[⨁]</span></p>`
+            },
+            {
+                title: "Chapter 7: The Voices Become Clear",
+                content: `<p>The silence in the temple, once broken only by the soft creaks of ancient stone and the whispered echoes of fate, had shifted into something altogether more deliberate. As Elias continued his solitary exploration, the once-murky, indistinct murmurs of the temple began to crystallize into clear, articulate phrases. It was as though the very air around him had become charged with a language older than time—a language meant for those chosen to witness the hidden truths.</p><p class="mt-4">Elias paused in the center of a vast, dim corridor. The cool, shadowed passage, lined with crumbling inscriptions and faded murals, seemed to hold its breath. For the first time, the whispering voices that had accompanied him on his journey no longer appeared as mere indistinct echoes. Instead, they wove together into full sentences, spoken in a timbre that was both melancholic and commanding.</p><p class="mt-4">"Elias... guardian of the lost," a voice intoned softly, reverberating from the stone itself. It was neither male nor female, but a sound that resonated deep within his chest. The voice repeated his name, as if confirming a destiny foretold long before he set foot in the temple. Elias's heart pounded in his ears; the realization that these voices were not the incoherent ramblings of the wind but the articulate speech of ancient beings was both awe-inspiring and terrifying.</p>`
+            },
+            {
+                title: "Chapter 8: The Chamber of Chains",
+                content: `<p>The temple's labyrinthine corridors led Elias deeper into the heart of its enigma, where every step carried the weight of a thousand whispered secrets. In the wake of the spectral voices and the revelations of his own mark, he pressed on with a mixture of trepidation and determined resolve. The passageways narrowed, and the air grew cooler, heavy with the scent of ancient stone and the lingering echo of lost memories. It was as if the temple itself were drawing a slow, deliberate breath, preparing to reveal yet another of its hidden truths.</p><p class="mt-4">After what felt like hours of wandering through dimly lit halls, Elias came upon a vast, circular chamber that immediately set his pulse racing. In the center of the room, looming like a dark monolith against the backdrop of crumbling arches, stood a massive stone vault. Its surface was pitted with the scars of time, and thick, iron-like chains—crafted of an unknown, glistening metal—coiled around its form in intricate, almost ritualistic patterns. The vault exuded a sinister aura, its cold, unyielding presence a silent warning of the curse that lay dormant within.</p><p class="mt-4">He circled the vault cautiously, his senses alert to every subtle sound—a distant clank of metal, the soft whisper of wind through broken stone, the almost imperceptible hum that seemed to emanate from deep within the vault's core. It was here, in this foreboding chamber of chains, that the true nature of the temple's ancient curse began to take shape. Elias's heart hammered as he recalled the inscription from a worn plaque he had discovered earlier in his journey: "This prison was sealed with blood. Open it, and the curse shall walk again." <span class="interactive-symbol" onclick="showModal('The Curse', 'An ancient power bound within the vault. Forged in a pact between realms, its release threatens to shatter the balance of the world. The nature of the curse is unknown, but it is a force of raw, unyielding power.')">[⨁]</span></p>`
+            },
+            {
+                title: "Chapter 9: The First Breaking",
+                content: `<p>The heavy silence of the vault chamber had settled over Elias like a shroud—a silence that spoke of ancient secrets and promises too terrible to fully comprehend. For days, the memory of the cursed inscription had echoed in his mind: "Open it, and the curse shall walk again." Now, with the weight of that warning pressing upon him, he had found himself standing before the altar, his hand trembling as it hovered over the cold stone surface. The guardian's mark on his arm pulsed steadily, a silent beacon that seemed to demand he complete what had been set in motion by fate.</p><p class="mt-4">With a deep, shuddering breath, Elias pressed his palm against the smooth surface of the altar. In that split second, a surge of raw, ancient power shot through him—a shockwave that blurred the boundaries between the present and a time when gods and mortals shared dominion. The chains that had so long bound the vault responded to his touch; they vibrated with an intensity that echoed through the stone, as if awakening from a long, deathlike slumber.</p><p class="mt-4">Then, without warning, the chains snapped. A sound like the cracking of a thousand brittle bones resonated throughout the chamber as the chains broke free from their ancient moorings. The heavy metal clattered against stone in a discordant symphony that reverberated through the very foundations of the temple. In that moment, the silent promise of containment shattered, and the air exploded with a pulse of unseen energy—a force that rippled outward like the shockwave of a fallen star.</p>`
+            },
+            {
+                title: "Chapter 10: The Thing in the Dark",
+                content: `<p>The tumult of the breaking had slowly subsided, leaving behind an eerie quiet that pressed against every stone of the ancient temple. In the aftermath of the vault's cataclysm, when the chains lay scattered like shattered relics of an ancient curse, the air itself had grown unnervingly still. Elias Blackthorne stood in the center of the vast chamber, his heart still hammering from the chaos of unleashed power. Yet now, an oppressive silence had descended—a silence so complete that even the faint drip of water seemed a distant memory.</p><p class="mt-4">In that quiet, every sense of Elias sharpened. He could feel the residual energy thrumming in the very walls, a low, rhythmic pulse that hinted at a power not yet spent. The atmosphere was thick with expectation, as though the temple were holding its breath, waiting for something to occur. It was in this unnatural hush that the first true sign of the temple's retribution would manifest.</p><p class="mt-4">Without warning, the dim light in the chamber began to waver. Shadows danced and stretched across the cracked floor, converging toward a central point near the vault's shattered remains. At first, it appeared to be nothing more than a trick of the flickering torchlight—a distortion born of exhaustion and fear. But as Elias's eyes adjusted, he saw it: a figure emerging from the darkness, coalescing as if summoned from the very depths of the ancient curse.</p><p class="mt-4">The entity's form was elusive and ever-changing—a shifting silhouette of liquid shadow that defied definition. It was as if the boundaries between light and shadow had blurred, leaving only an inky fluid mass that moved with a deliberate, almost hypnotic grace. <span class="interactive-symbol" onclick="showModal('The Remnant', 'A spectral entity, one of the original guardians of the temple. It appears as a shifting figure of liquid shadow and speaks with the weight of ages, guiding Elias toward his destiny.')">[⨁]</span></p><p class="mt-4">Then, in a voice that seemed to echo from the void itself—a voice both ancient and intimate—the figure spoke his name: "Elias..."</p>`
+            }
+        ];
+
+        // --- STATE ---
+        // Keeps track of the currently viewed chapter.
+        let currentChapterIndex = 0;
+
+        // --- ELEMENTS ---
+        // References to DOM elements for manipulation.
+        const reader = document.getElementById('reader');
+        const chapterTitle = document.getElementById('chapter-title');
+        const chapterText = document.getElementById('chapter-text');
+        const tocList = document.getElementById('toc-list');
+        const toc = document.getElementById('toc');
+        const prevBtn = document.getElementById('prev-btn');
+        const nextBtn = document.getElementById('next-btn');
+        const modal = document.getElementById('modal');
+        const modalTitleEl = document.getElementById('modal-title');
+        const modalTextEl = document.getElementById('modal-text');
+
+        // --- FUNCTIONS ---
+
+        /**
+         * Loads a chapter's content into the reader.
+         * @param {number} index - The index of the chapter to load.
+         */
+        function loadChapter(index) {
+            if (index < 0 || index >= chapters.length) {
+                console.error("Invalid chapter index:", index);
+                return;
+            }
+
+            currentChapterIndex = index;
+            const chapter = chapters[index];
+
+            // Fade out the content
+            reader.style.opacity = 0;
+
+            setTimeout(() => {
+                // Update content
+                chapterTitle.textContent = chapter.title;
+                chapterText.innerHTML = chapter.content;
+
+                // Update navigation buttons
+                prevBtn.disabled = (index === 0);
+                nextBtn.disabled = (index === chapters.length - 1);
+
+                // Update active link in ToC
+                updateActiveTocLink();
+                
+                // Scroll to the top of the reader
+                window.scrollTo({ top: reader.offsetTop - 100, behavior: 'smooth' });
+
+                // Fade in the new content
+                reader.style.opacity = 1;
+            }, 300); // Match timeout to CSS transition
+        }
+        
+        /**
+         * Populates the Table of Contents dynamically.
+         */
+        function populateToc() {
+            tocList.innerHTML = ''; // Clear existing list
+            chapters.forEach((chapter, index) => {
+                const li = document.createElement('li');
+                const a = document.createElement('a');
+                a.href = '#';
+                a.textContent = chapter.title;
+                a.classList.add('hover:text-[#a267e8]', 'transition-colors', 'toc-link');
+                a.dataset.index = index;
+                a.onclick = (e) => {
+                    e.preventDefault();
+                    loadChapter(index);
+                    toggleToc(); // Close ToC after selection
+                };
+                li.appendChild(a);
+                tocList.appendChild(li);
+            });
+        }
+        
+        /**
+         * Updates which link is highlighted as 'active' in the ToC.
+         */
+        function updateActiveTocLink() {
+            const links = tocList.querySelectorAll('a');
+            links.forEach(link => {
+                if (parseInt(link.dataset.index) === currentChapterIndex) {
+                    link.classList.add('active');
+                } else {
+                    link.classList.remove('active');
+                }
+            });
+        }
+
+        /**
+         * Navigates to the next chapter.
+         */
+        function nextChapter() {
+            if (currentChapterIndex < chapters.length - 1) {
+                loadChapter(currentChapterIndex + 1);
+            }
+        }
+
+        /**
+         * Navigates to the previous chapter.
+         */
+        function prevChapter() {
+            if (currentChapterIndex > 0) {
+                loadChapter(currentChapterIndex - 1);
+            }
+        }
+
+        /**
+         * Toggles the visibility of the Table of Contents.
+         */
+        function toggleToc() {
+            toc.classList.toggle('toc-hidden');
+        }
+
+        /**
+         * Shows the modal with specified lore content.
+         * @param {string} title - The title for the modal.
+         * @param {string} text - The description text for the modal.
+         */
+        function showModal(title, text) {
+            modalTitleEl.textContent = title;
+            modalTextEl.textContent = text;
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+        }
+
+        /**
+         * Closes the modal.
+         */
+        function closeModal() {
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        }
+
+        // --- EVENT LISTENERS ---
+        prevBtn.addEventListener('click', prevChapter);
+        nextBtn.addEventListener('click', nextChapter);
+        modal.addEventListener('click', (event) => {
+            if (event.target === modal) {
+                closeModal();
+            }
+        });
+
+        // --- INITIALIZATION ---
+        // Load the first chapter and populate the ToC when the page loads.
+        document.addEventListener('DOMContentLoaded', () => {
+            populateToc();
+            loadChapter(0);
+        });
+    </script>
+
+</body>
+</html>
